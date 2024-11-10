@@ -766,6 +766,7 @@ label {
     height: auto;
     border-top: 1px solid #dbdbdb;
     border-right: none;
+    background-color: white;
   }
 
   .side-nav-container {
