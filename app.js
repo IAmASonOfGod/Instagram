@@ -19,6 +19,13 @@ class App {
     this.$profileContent = document.querySelector(".profile-content");
     this.$Content = document.querySelector(".content");
     this.$homeBtn = document.querySelector(".Home-btn");
+    this.$optionsBtn = document.querySelectorAll(".optionsModal-btn");
+    this.$moreOptionsModal = document.querySelector(".more-options-modal");
+    this.$moreOptionsContainer = document.querySelector(
+      ".more-options-container"
+    );
+    this.$editBtn = document.querySelector(".editBtn");
+    this.$deleteBtn = document.querySelector(".deleteBtn");
 
     this.ui = new firebaseui.auth.AuthUI(firebase.auth());
     this.handleAuth();
@@ -32,17 +39,22 @@ class App {
     });
 
     this.saveToStorage();
-    // this.readFromStorage();
 
-    this.$uploadPage.addEventListener("click", this.closeModal.bind(this));
-    this.$closeModalBtn.addEventListener("click", this.closeModal.bind(this));
+    this.$uploadPage.addEventListener(
+      "click",
+      this.CloseCreateModal.bind(this)
+    );
+    this.$closeModalBtn.addEventListener(
+      "click",
+      this.CloseCreateModal.bind(this)
+    );
 
     this.$postForm.addEventListener("click", function (event) {
       event.stopPropagation();
     });
 
     this.$postForm.addEventListener("click", (e) => {
-      this.modalOpened();
+      this.CloseCreateModal();
     });
 
     this.$profileBtn.addEventListener("click", (e) => {
@@ -52,74 +64,166 @@ class App {
     this.$homeBtn.addEventListener("click", (e) => {
       this.ReturnHome();
     });
+
+    this.$editBtn.addEventListener("click", (event) => {
+      this.EditPost();
+    });
+
+    this.$deleteBtn.addEventListener("click", () => {
+      this.deletePost();
+    });
+
+    this.$optionsBtn.forEach((button) => {
+      button.addEventListener("click", () => {
+        this.OpenOptionsModal();
+      });
+    });
+
+    this.$moreOptionsModal.addEventListener("click", (event) => {
+      this.CloseOptionsModal(event);
+    });
+
+    this.currentPostId = null;
+    document.addEventListener("click", (event) => {
+      const postElement = event.target.closest(".post");
+      if (postElement) {
+        this.currentPostId = postElement.dataset.postId;
+        console.log("Found post ID:", this.currentPostId);
+      } else {
+        console.log("No .post element found.");
+      }
+    });
   }
 
   saveToStorage() {
     this.$uploadFileButton.addEventListener("click", (event) => {
-      event.preventDefault(); // Prevent default form submission if within a form
+      event.preventDefault();
 
       const file = this.$fileInput.files[0];
-      if (!file) {
-        console.error("No file selected.");
-        return;
-      }
-
       const captionValue = this.$caption.value;
-      console.log("File:", file);
-      console.log("Caption:", captionValue);
+      const statusElement = document.querySelector("#statusMessage");
 
       const user = firebase.auth().currentUser;
-      if (!user) {
-        console.error("No user is signed in.");
-        return;
-      }
+      if (!user) return console.error("No user is signed in.");
 
       const displayName = user.displayName;
 
-      const storageRef = this.storage.ref("images/" + file.name);
-      const uploadTask = storageRef.put(file);
+      if (this.currentPostId) {
+        // Handle edit functionality
+        const postRef = this.firestore
+          .collection("images")
+          .doc(this.currentPostId);
+        let updateData = {};
 
-      uploadTask.on(
-        "state_changed",
-        (snapshot) => {
-          const progress =
-            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          console.log("Upload is " + progress + "% done");
-        },
-        (error) => {
-          console.error("Error during upload:", error);
-        },
-        () => {
-          // Upload completed successfully, now we get the download URL
-          storageRef
-            .getDownloadURL()
-            .then((url) => {
-              console.log("File available at", url);
+        if (file) {
+          const storageRef = this.storage.ref("images/" + file.name);
+          const uploadTask = storageRef.put(file);
 
-              const userId = firebase.auth().currentUser.uid;
+          uploadTask.on(
+            "state_changed",
+            (snapshot) => {
+              const progress =
+                (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              console.log("Upload is " + progress + "% done");
+            },
+            (error) => {
+              console.error("Error during upload:", error);
+              statusElement.innerHTML = "Edit Unsuccessful";
+              statusElement.style.color = "red";
+            },
+            () => {
+              storageRef.getDownloadURL().then((url) => {
+                updateData.url = url; // Add new image URL to update data
+                this.finalizeSaveOrEdit(
+                  postRef,
+                  updateData,
+                  captionValue,
+                  statusElement
+                );
+              });
+            }
+          );
+        } else {
+          // Only update caption if no new file is selected
+          this.finalizeSaveOrEdit(
+            postRef,
+            updateData,
+            captionValue,
+            statusElement
+          );
+        }
+      } else {
+        // Handle new post upload
+        if (!file) return console.error("No file selected.");
 
+        const storageRef = this.storage.ref("images/" + file.name);
+        const uploadTask = storageRef.put(file);
+
+        uploadTask.on(
+          "state_changed",
+          (snapshot) => {
+            const progress =
+              (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            console.log("Upload is " + progress + "% done");
+          },
+          (error) => {
+            console.error("Error during upload:", error);
+            statusElement.innerHTML = "Upload Unsuccessful";
+            statusElement.style.color = "red";
+          },
+          () => {
+            storageRef.getDownloadURL().then((url) => {
               const imageData = {
-                userId: userId,
+                userId: user.uid,
                 displayName: displayName,
                 caption: captionValue,
                 url: url,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
               };
 
-              return this.firestore.collection("images").add(imageData);
-            })
-            .then(() => {
-              console.log("Data stored successfully in Firestore");
-
-              this.$fileInput.value = "";
-              this.$caption.value = "";
-            })
-            .catch((error) => {
-              console.error("Error storing data:", error);
+              this.firestore
+                .collection("images")
+                .add(imageData)
+                .then(() => {
+                  statusElement.innerHTML = "Upload Successful";
+                  statusElement.style.color = "green";
+                  this.$fileInput.value = "";
+                  this.$caption.value = "";
+                  setTimeout(() => location.reload(), 2000);
+                })
+                .catch((error) => {
+                  console.error("Error storing data:", error);
+                  statusElement.innerHTML = "Upload Unsuccessful";
+                  statusElement.style.color = "red";
+                });
             });
-        }
-      );
+          }
+        );
+      }
     });
+  }
+
+  finalizeSaveOrEdit(postRef, updateData, newCaptionValue, statusElement) {
+    if (newCaptionValue) {
+      updateData.caption = newCaptionValue;
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      postRef
+        .update(updateData)
+        .then(() => {
+          statusElement.innerHTML = "Edit Successful";
+          statusElement.style.color = "green";
+          setTimeout(() => location.reload(), 2000);
+        })
+        .catch((error) => {
+          console.error("Error updating data:", error);
+          statusElement.innerHTML = "Edit Unsuccessful";
+          statusElement.style.color = "red";
+        });
+    } else {
+      console.log("No changes to update.");
+    }
   }
 
   readFromStorage() {
@@ -140,9 +244,11 @@ class App {
 
         querySnapshot.forEach((doc) => {
           const post = doc.data();
-
+          const postId = doc.id;
           const postDiv = document.createElement("div");
           postDiv.classList.add("post");
+          postDiv.dataset.postId = postId;
+          console.log(postId);
           document.querySelector(".username").textContent = post.displayName
             .toLowerCase()
             .replace(/\s+/g, ""); // example: "akhilboddu"
@@ -150,7 +256,7 @@ class App {
 
           // Add the inner HTML for the post
           postDiv.innerHTML = `
-  <div class="post">
+  <div class="post" data-post-id="${postId}">
     <div class="header">
       <div class="profile-area">
         <div class="post-pic">
@@ -164,7 +270,7 @@ class App {
         </div>
         <span class="profile-name">${post.displayName}</span>
       </div>
-      <div class="options">
+      <div class="options optionsModal-btn">
         <div class="Igw0E rBNOH YBx95 _4EzTm" style="height: 24px; width: 24px">
           <svg aria-label="More options" class="_8-yf5" fill="#262626" height="16" viewBox="0 0 48 48" width="16">
             <circle clip-rule="evenodd" cx="8" cy="24" fill-rule="evenodd" r="4.5"></circle>
@@ -245,17 +351,22 @@ class App {
       .catch((error) => {
         console.error("Error fetching posts: ", error);
       });
+
+    //Dynamic content loads first then call event listener
+    dynamicContentDiv.addEventListener("click", (event) => {
+      if (event.target.closest(".optionsModal-btn")) {
+        this.OpenOptionsModal();
+      }
+    });
   }
 
   handleUpload() {
     this.$firebaseAuthContainer.style.display = "none";
     this.$app.style.display = "block";
     this.$uploadPage.style.display = "block";
-    // this.$uploadPage.classList.remove("hidden");
-    // this.$uploadPage.classList.add("show");
   }
 
-  closeModal(event) {
+  CloseCreateModal(event) {
     if (
       !this.$postForm.contains(event.target) ||
       this.$closeModalBtn.contains(event.target)
@@ -264,17 +375,117 @@ class App {
       this.$app.style.display = "block";
       this.$uploadPage.style.display = "none";
     }
+    this.$fileInput.value = "";
+    this.$caption.value = "";
   }
 
-  modalOpened() {
-    if (this.$postForm) {
-      console.log("Post form element found");
-    } else {
-      console.log("Post form element not found");
-    }
+  OpenCreateModal() {
     this.$firebaseAuthContainer.style.display = "none";
     this.$app.style.display = "block";
     this.$uploadPage.style.display = "block";
+  }
+
+  CloseOptionsModal(event) {
+    if (this.$moreOptionsModal.contains(event.target)) {
+      this.$firebaseAuthContainer.style.display = "none";
+      this.$app.style.display = "block";
+      this.$uploadPage.style.display = "none";
+      this.$moreOptionsModal.style.display = "none";
+      console.log("Close modal is working");
+    }
+  }
+
+  OpenOptionsModal(postId) {
+    this.$firebaseAuthContainer.style.display = "none";
+    this.$app.style.display = "block";
+    this.$uploadPage.style.display = "none";
+    this.$moreOptionsModal.style.display = "block";
+
+    this.$moreOptionsContainer.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+
+    console.log("Open modal is working");
+  }
+
+  EditPost() {
+    this.$uploadPage.style.display = "block";
+    this.$moreOptionsModal.style.display = "none";
+    // Retrieve the current post details (using the currentPostId)
+    if (this.currentPostId) {
+      this.firestore
+        .collection("images")
+        .doc(this.currentPostId)
+        .get()
+        .then((doc) => {
+          if (doc.exists) {
+            const postData = doc.data();
+
+            this.$fileInput.value = "";
+            this.$caption.value = postData.caption || "";
+
+            const imagePreview = document.querySelector("#image-preview");
+            if (imagePreview) {
+              imagePreview.src = postData.url;
+            }
+          }
+        })
+        .catch((error) => {
+          console.error("Error fetching post data:", error);
+        });
+    }
+  }
+
+  async deletePost() {
+    if (!this.currentPostId) {
+      console.error("No post ID found to delete.");
+      return;
+    }
+
+    try {
+      const postElement = document.querySelector(
+        `[data-post-id='${this.currentPostId}']`
+      );
+      if (postElement) {
+        postElement.remove(); // Remove the element from the DOM immediately
+        console.log("Post element removed from the DOM.");
+      } else {
+        console.warn("No DOM element found for post ID:", this.currentPostId);
+      }
+
+      const doc = await this.firestore
+        .collection("images")
+        .doc(this.currentPostId)
+        .get();
+
+      if (!doc.exists) {
+        console.warn(
+          "Post not found in Firestore with ID:",
+          this.currentPostId
+        );
+        return;
+      }
+
+      const post = doc.data();
+      console.log("Post data to delete:", post);
+
+      await this.firestore
+        .collection("images")
+        .doc(this.currentPostId)
+        .delete();
+      console.log("Post document deleted successfully from Firestore");
+
+      if (post.url) {
+        const storageRef = firebase.storage().refFromURL(post.url);
+        await storageRef.delete();
+        console.log("Image deleted successfully from Firebase Storage.");
+      } else {
+        console.log("No image found for this post.");
+      }
+    } catch (error) {
+      console.error("Error deleting post:", error);
+    }
+    location.reload();
   }
 
   handleAuth() {
@@ -312,7 +523,6 @@ class App {
 
     this.ui.start("#firebaseui-auth-container", {
       signInOptions: [firebase.auth.EmailAuthProvider.PROVIDER_ID],
-      // Other config options...
     });
   }
 
@@ -331,4 +541,4 @@ class App {
   }
 }
 
-const InstagramApp = new App();
+document.addEventListener("DOMContentLoaded", () => new App());
