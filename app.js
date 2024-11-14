@@ -92,20 +92,6 @@ class App {
         console.log("No .post element found.");
       }
     });
-
-  //  document.addEventListener(
-  //    "click",
-  //    function (event) {
-  //      // Loop through each options button
-  //      this.$optionsBtn.forEach((button) => {
-  //        // Check if the click target is within the button
-  //        if (button.contains(event.target)) {
-  //          this.OpenOptionsModal();
-  //        }
-  //      });
-  //    }.bind(this)
-  //  );
-
   }
 
   saveToStorage() {
@@ -146,7 +132,7 @@ class App {
             },
             () => {
               storageRef.getDownloadURL().then((url) => {
-                updateData.url = url; // Add new image URL to update data
+                updateData.url = url;
                 this.finalizeSaveOrEdit(
                   postRef,
                   updateData,
@@ -264,10 +250,9 @@ class App {
           console.log(postId);
           document.querySelector(".username").textContent = post.displayName
             .toLowerCase()
-            .replace(/\s+/g, ""); // example: "akhilboddu"
+            .replace(/\s+/g, "");
           document.querySelector(".name").textContent = post.displayName;
 
-          // Add the inner HTML for the post
           postDiv.innerHTML = `
   <div class="post" data-post-id="${postId}">
     <div class="header">
@@ -414,24 +399,21 @@ class App {
     const posts = document.querySelectorAll(".post");
 
     posts.forEach((post) => {
-      // Attach click event to each post
       post.addEventListener("click", () => {
         const postId = post.dataset.postId;
-        
 
         if (postId === "static") {
-         
-            this.$firebaseAuthContainer.style.display = "none";
-            this.$app.style.display = "block";
-            this.$uploadPage.style.display = "none";
-            this.$moreOptionsModal.style.display = "block";
+          this.$firebaseAuthContainer.style.display = "none";
+          this.$app.style.display = "block";
+          this.$uploadPage.style.display = "none";
+          this.$moreOptionsModal.style.display = "block";
 
-            this.$moreOptionsContainer.addEventListener("click", (event) => {
-              event.stopPropagation();
-            });
-            this.$dynamicModal.style.display = "none";
-            this.$staticModal.style.display = "flex";
-         
+          this.$moreOptionsContainer.addEventListener("click", (event) => {
+            event.stopPropagation();
+          });
+          this.$dynamicModal.style.display = "none";
+          this.$staticModal.style.display = "flex";
+
           console.log(`You pressed on the static div with post ID: ${postId}`);
         } else {
           this.$firebaseAuthContainer.style.display = "none";
