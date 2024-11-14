@@ -26,6 +26,8 @@ class App {
     );
     this.$editBtn = document.querySelector(".editBtn");
     this.$deleteBtn = document.querySelector(".deleteBtn");
+    this.$staticModal = document.querySelector(".static-modal");
+    this.$dynamicModal = document.querySelector(".dynamic-modal");
 
     this.ui = new firebaseui.auth.AuthUI(firebase.auth());
     this.handleAuth();
@@ -49,11 +51,8 @@ class App {
       this.CloseCreateModal.bind(this)
     );
 
-    this.$postForm.addEventListener("click", function (event) {
+    this.$postForm.addEventListener("click", (event) => {
       event.stopPropagation();
-    });
-
-    this.$postForm.addEventListener("click", (e) => {
       this.CloseCreateModal();
     });
 
@@ -93,6 +92,20 @@ class App {
         console.log("No .post element found.");
       }
     });
+
+  //  document.addEventListener(
+  //    "click",
+  //    function (event) {
+  //      // Loop through each options button
+  //      this.$optionsBtn.forEach((button) => {
+  //        // Check if the click target is within the button
+  //        if (button.contains(event.target)) {
+  //          this.OpenOptionsModal();
+  //        }
+  //      });
+  //    }.bind(this)
+  //  );
+
   }
 
   saveToStorage() {
@@ -227,7 +240,7 @@ class App {
   }
 
   readFromStorage() {
-    const dynamicContentDiv = document.querySelector("#dynamic-content");
+    const dynamicContentDiv = document.querySelectorAll(".dynamic-content");
 
     const user = firebase.auth().currentUser;
     if (!user) {
@@ -345,7 +358,9 @@ class App {
   </div>`;
 
           // Append the post div to the dynamic content area
-          dynamicContentDiv.appendChild(postDiv);
+          dynamicContentDiv.forEach((div) => {
+            div.appendChild(postDiv.cloneNode(true));
+          });
         });
       })
       .catch((error) => {
@@ -395,17 +410,45 @@ class App {
     }
   }
 
-  OpenOptionsModal(postId) {
-    this.$firebaseAuthContainer.style.display = "none";
-    this.$app.style.display = "block";
-    this.$uploadPage.style.display = "none";
-    this.$moreOptionsModal.style.display = "block";
+  OpenOptionsModal() {
+    const posts = document.querySelectorAll(".post");
 
-    this.$moreOptionsContainer.addEventListener("click", (event) => {
-      event.stopPropagation();
+    posts.forEach((post) => {
+      // Attach click event to each post
+      post.addEventListener("click", () => {
+        const postId = post.dataset.postId;
+        
+
+        if (postId === "static") {
+         
+            this.$firebaseAuthContainer.style.display = "none";
+            this.$app.style.display = "block";
+            this.$uploadPage.style.display = "none";
+            this.$moreOptionsModal.style.display = "block";
+
+            this.$moreOptionsContainer.addEventListener("click", (event) => {
+              event.stopPropagation();
+            });
+            this.$dynamicModal.style.display = "none";
+            this.$staticModal.style.display = "flex";
+         
+          console.log(`You pressed on the static div with post ID: ${postId}`);
+        } else {
+          this.$firebaseAuthContainer.style.display = "none";
+          this.$app.style.display = "block";
+          this.$uploadPage.style.display = "none";
+          this.$moreOptionsModal.style.display = "block";
+
+          this.$moreOptionsContainer.addEventListener("click", (event) => {
+            event.stopPropagation();
+          });
+          this.$staticModal.style.display = "none";
+          this.$dynamicModal.style.display = "block";
+
+          console.log(`You pressed on the dynamic div with post ID: ${postId}`);
+        }
+      });
     });
-
-    console.log("Open modal is working");
   }
 
   EditPost() {

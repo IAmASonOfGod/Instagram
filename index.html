@@ -471,6 +471,9 @@
                     </div>
                   </div>
                 </div>
+                <div class="dynamic-content">
+                  <!-- Dynamic images will be appended here -->
+                </div>
                 <div class="profile-section-footer">
                   <ul class="footer-list">
                     <li>Meta</li>
@@ -666,10 +669,10 @@
               </div>
               <div class="posts">
                 <div id="posts-container">
-                  <div id="dynamic-content">
+                  <div class="dynamic-content">
                     <!-- Dynamic images will be appended here -->
                   </div>
-                  <div class="post">
+                  <div class="post" data-post-id="static">
                     <div class="header">
                       <div class="profile-area">
                         <div class="post-pic">
@@ -822,7 +825,7 @@
                       <a class="post-btn">Post</a>
                     </div>
                   </div>
-                  <div class="post">
+                  <div class="post" data-post-id="static">
                     <div class="header">
                       <div class="profile-area">
                         <div class="post-pic">
@@ -975,7 +978,7 @@
                       <a class="post-btn">Post</a>
                     </div>
                   </div>
-                  <div class="post">
+                  <div class="post" data-post-id="static">
                     <div class="header">
                       <div class="profile-area">
                         <div class="post-pic">
@@ -1229,9 +1232,18 @@
     </div>
 
     <div class="more-options-modal">
-      <div class="more-options-container">
+      <div class="more-options-container dynamic-modal">
         <div class="editBtn">Edit</div>
         <div class="deleteBtn">Delete</div>
+        <div>Report</div>
+        <div>Unfollow</div>
+        <div>Go To Post</div>
+        <div>Share to...</div>
+        <div>Copy link</div>
+        <div>Embed</div>
+        <div>Cancel</div>
+      </div>
+      <div class="more-options-static static-modal">
         <div>Report</div>
         <div>Unfollow</div>
         <div>Go To Post</div>
