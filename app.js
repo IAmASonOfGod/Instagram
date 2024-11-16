@@ -72,12 +72,6 @@ class App {
       this.deletePost();
     });
 
-    this.$optionsBtn.forEach((button) => {
-      button.addEventListener("click", () => {
-        this.OpenOptionsModal();
-      });
-    });
-
     this.$moreOptionsModal.addEventListener("click", (event) => {
       this.CloseOptionsModal(event);
     });
@@ -352,12 +346,7 @@ class App {
         console.error("Error fetching posts: ", error);
       });
 
-    //Dynamic content loads first then call event listener
-    dynamicContentDiv.addEventListener("click", (event) => {
-      if (event.target.closest(".optionsModal-btn")) {
-        this.OpenOptionsModal();
-      }
-    });
+    this.OpenOptionsModal();
   }
 
   handleUpload() {
@@ -396,40 +385,39 @@ class App {
   }
 
   OpenOptionsModal() {
-    const posts = document.querySelectorAll(".post");
+    document.addEventListener("click", (event) => {
+      const post = event.target.closest(".post");
+      if (!post) return;
 
-    posts.forEach((post) => {
-      post.addEventListener("click", () => {
-        const postId = post.dataset.postId;
+      const postId = post.dataset.postId;
 
-        if (postId === "static") {
-          this.$firebaseAuthContainer.style.display = "none";
-          this.$app.style.display = "block";
-          this.$uploadPage.style.display = "none";
-          this.$moreOptionsModal.style.display = "block";
+      if (postId === "static") {
+        this.$firebaseAuthContainer.style.display = "none";
+        this.$app.style.display = "block";
+        this.$uploadPage.style.display = "none";
+        this.$moreOptionsModal.style.display = "block";
 
-          this.$moreOptionsContainer.addEventListener("click", (event) => {
-            event.stopPropagation();
-          });
-          this.$dynamicModal.style.display = "none";
-          this.$staticModal.style.display = "flex";
+        this.$moreOptionsContainer.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+        this.$dynamicModal.style.display = "none";
+        this.$staticModal.style.display = "flex";
 
-          console.log(`You pressed on the static div with post ID: ${postId}`);
-        } else {
-          this.$firebaseAuthContainer.style.display = "none";
-          this.$app.style.display = "block";
-          this.$uploadPage.style.display = "none";
-          this.$moreOptionsModal.style.display = "block";
+        console.log(`You pressed on the static div with post ID: ${postId}`);
+      } else {
+        this.$firebaseAuthContainer.style.display = "none";
+        this.$app.style.display = "block";
+        this.$uploadPage.style.display = "none";
+        this.$moreOptionsModal.style.display = "block";
 
-          this.$moreOptionsContainer.addEventListener("click", (event) => {
-            event.stopPropagation();
-          });
-          this.$staticModal.style.display = "none";
-          this.$dynamicModal.style.display = "block";
+        this.$moreOptionsContainer.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+        this.$staticModal.style.display = "none";
+        this.$dynamicModal.style.display = "block";
 
-          console.log(`You pressed on the dynamic div with post ID: ${postId}`);
-        }
-      });
+        console.log(`You pressed on the dynamic div with post ID: ${postId}`);
+      }
     });
   }
 
