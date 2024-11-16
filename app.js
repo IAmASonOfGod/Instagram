@@ -88,76 +88,33 @@ class App {
     });
   }
 
-  saveToStorage() {
-    this.$uploadFileButton.addEventListener("click", (event) => {
-      event.preventDefault();
+ saveToStorage() {
+  this.$uploadFileButton.addEventListener("click", (event) => {
+    event.preventDefault();
 
-      const file = this.$fileInput.files[0];
-      const captionValue = this.$caption.value;
-      const statusElement = document.querySelector("#statusMessage");
+    const file = this.$fileInput.files[0];
+    const captionValue = this.$caption.value;
+    const statusElement = document.querySelector("#statusMessage");
 
-      const user = firebase.auth().currentUser;
-      if (!user) return console.error("No user is signed in.");
+    const user = firebase.auth().currentUser;
+    if (!user) return console.error("No user is signed in.");
 
-      const displayName = user.displayName;
+    const displayName = user.displayName;
 
-      if (this.currentPostId) {
-        // Handle edit functionality
-        const postRef = this.firestore
-          .collection("images")
-          .doc(this.currentPostId);
-        let updateData = {};
+    if (this.currentPostId) {
+      // Handle edit functionality
+      const postRef = this.firestore.collection("images").doc(this.currentPostId);
+      let updateData = {};
 
-        if (file) {
-          const storageRef = this.storage.ref("images/" + file.name);
-          const uploadTask = storageRef.put(file);
-
-          uploadTask.on(
-            "state_changed",
-            (snapshot) => {
-              const progress =
-                (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-              console.log("Upload is " + progress + "% done");
-            },
-            (error) => {
-              console.error("Error during upload:", error);
-              statusElement.innerHTML = "Edit Unsuccessful";
-              statusElement.style.color = "red";
-            },
-            () => {
-              storageRef.getDownloadURL().then((url) => {
-                updateData.url = url;
-                this.finalizeSaveOrEdit(
-                  postRef,
-                  updateData,
-                  captionValue,
-                  statusElement
-                );
-              });
-            }
-          );
-        } else {
-          // Only update caption if no new file is selected
-          this.finalizeSaveOrEdit(
-            postRef,
-            updateData,
-            captionValue,
-            statusElement
-          );
-        }
-      } else {
-        // Handle new post upload
-        if (!file) return console.error("No file selected.");
-
+      if (file) {
         const storageRef = this.storage.ref("images/" + file.name);
         const uploadTask = storageRef.put(file);
 
         uploadTask.on(
           "state_changed",
           (snapshot) => {
-            const progress =
-              (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            console.log("Upload is " + progress + "% done");
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            statusElement.innerHTML = `Upload in progress: ${Math.round(progress)}%`;
           },
           (error) => {
             console.error("Error during upload:", error);
@@ -166,35 +123,66 @@ class App {
           },
           () => {
             storageRef.getDownloadURL().then((url) => {
-              const imageData = {
-                userId: user.uid,
-                displayName: displayName,
-                caption: captionValue,
-                url: url,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-              };
-
-              this.firestore
-                .collection("images")
-                .add(imageData)
-                .then(() => {
-                  statusElement.innerHTML = "Upload Successful";
-                  statusElement.style.color = "green";
-                  this.$fileInput.value = "";
-                  this.$caption.value = "";
-                  setTimeout(() => location.reload(), 2000);
-                })
-                .catch((error) => {
-                  console.error("Error storing data:", error);
-                  statusElement.innerHTML = "Upload Unsuccessful";
-                  statusElement.style.color = "red";
-                });
+              updateData.url = url;
+              this.finalizeSaveOrEdit(postRef, updateData, captionValue, statusElement);
+              statusElement.innerHTML = "Upload Successful";
+              statusElement.style.color = "green";
             });
           }
         );
+      } else {
+        this.finalizeSaveOrEdit(postRef, updateData, captionValue, statusElement);
       }
-    });
-  }
+    } else {
+      // Handle new post upload
+      if (!file) return console.error("No file selected.");
+
+      const storageRef = this.storage.ref("images/" + file.name);
+      const uploadTask = storageRef.put(file);
+
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          statusElement.innerHTML = `Upload in progress: ${Math.round(progress)}%`;
+        },
+        (error) => {
+          console.error("Error during upload:", error);
+          statusElement.innerHTML = "Upload Unsuccessful";
+          statusElement.style.color = "red";
+        },
+        () => {
+          storageRef.getDownloadURL().then((url) => {
+            const imageData = {
+              userId: user.uid,
+              displayName: displayName,
+              caption: captionValue,
+              url: url,
+              timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            };
+
+            this.firestore
+              .collection("images")
+              .add(imageData)
+              .then(() => {
+                statusElement.innerHTML = "Upload Successful";
+                statusElement.style.color = "green";
+                this.$fileInput.value = "";
+                this.$caption.value = "";
+                setTimeout(() => location.reload(), 2000);
+              })
+              .catch((error) => {
+                console.error("Error storing data:", error);
+                statusElement.innerHTML = "Upload Unsuccessful";
+                statusElement.style.color = "red";
+              });
+          });
+        }
+      );
+    }
+  });
+}
+
 
   finalizeSaveOrEdit(postRef, updateData, newCaptionValue, statusElement) {
     if (newCaptionValue) {
